@@ -7,6 +7,7 @@
 #include<strings.h>
 #include<unistd.h>
 #include<errno.h>
+#define buffer_size 10240
 int main()
 {
 	int sockfd;
@@ -16,7 +17,7 @@ int main()
 	
 	char title[] = "Yesterday";
 	char artist[] = "The beatles";
-	char buffer[10240];
+	char buffer[buffer_size];
 	/*
 	if(argc < 3){
 		fprintf(stderr,"usage %s hostname port\n",argv[0]);
@@ -52,7 +53,7 @@ int main()
 	//artist
 	char t3[] = "</ns1:strArtistName><ns1:nCurPage>0</ns1:nCurPage></ns1:stQuery></ns1:GetResembleLyric2></SOAP-ENV:Body></SOAP-ENV:Envelope>";
 	len = strlen(t1) + strlen(title) + strlen(t2) + strlen(artist) + strlen(t3);
-	bzero(buffer,10240);
+	bzero(buffer,buffer_size);
 	sprintf(buffer,"POST /alsongwebservice/service1.asmx HTTP/1.1\r\nHost: lyrics.alsong.co.kr\r\nContent-Type:text/xml;charset=utf-8\r\nContent-Length: %d\r\n\r\n",len);
 	strcat(buffer, t1);
 	strcat(buffer,title);
@@ -63,7 +64,7 @@ int main()
     if (n < 0) 
          perror("ERROR writing to socket");
     
-    bzero(buffer,10240);
+    bzero(buffer,buffer_size);
 	int buffer_p = 0;
 	char end_string[] = "</soap:Envelope>";
 	int end_int = 0;
@@ -81,5 +82,52 @@ int main()
     
     close(sockfd); //close socket
     printf("strlen(buffer) = %lu\n",strlen(buffer));
+	
+	printf("\n\n");
+	
+	char buffer2[buffer_size];
+	char end_string2[] = "<strLyric>";
+	char end_string3[] = "</strLyric>";
+	int buffer2_start = 0;
+	int j = 0;
+	end_int = 0;
+	for(int i = 0; i < strlen(buffer); i++)
+	{
+		if(end_int < strlen(end_string2) && buffer[i] != end_string2[end_int])
+			end_int = 0;
+		if(buffer[i] == end_string2[end_int])
+			end_int++;
+		if(end_int == strlen(end_string2))
+		{
+			buffer2_start = 1;
+			end_int = 0;
+		}
+		if(buffer2_start == 1 && buffer[buffer_p] == end_string3[end_int])
+			end_int++;
+		if(buffer2_start == 1 && end_int == strlen(end_string3))
+			break;
+		if(buffer2_start == 1)
+		{
+			if(buffer[i] == '>')
+				continue;
+			
+			if(buffer[i+1] == '/' && buffer[i+2] == 's' && buffer[i+3] == 't')
+				break;
+			
+			if(buffer[i] == '&' && buffer[i+1] == 'l' && buffer[i+2] == 't' && buffer[i+3] == ';' && buffer[i+4] == 'b' && buffer[i+5] == 'r')
+			{
+				i = i+10;
+				buffer2[j++] = '\n';
+			}
+			if(buffer[i] == '[')
+			{
+				i = i+10;
+			}
+			buffer2[j++] = buffer[i];
+		}
+		
+		
+	}
+	printf("%s\n",buffer2);
     return 0;
 }
